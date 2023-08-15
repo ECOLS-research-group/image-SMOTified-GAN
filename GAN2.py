@@ -25,6 +25,7 @@ def build_discriminator(img_shape):
     return model
 
 
+
 # Define GAN model
 def build_gan(generator, discriminator):
     discriminator.trainable = False
@@ -54,7 +55,9 @@ gan.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(lr=0.
 
 # Load and preprocess the dataset using ImageDataGenerator
 datagen = ImageDataGenerator(rescale=1.0 / 255)
-data_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\train'
+
+#data_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\train'
+data_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\train"
 batch_size = 32  # Adjust the batch size to be a multiple of the number of categories (e.g., 32/2 = 16)
 image_size = (128, 128)
 
@@ -68,11 +71,12 @@ train_generator = datagen.flow_from_directory(
 
 
 # Create a directory to save generated images
-output_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\generated'
+#output_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\generated'
+output_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\generated"
 os.makedirs(output_dir, exist_ok=True)
 
 # Training loop
-epochs = 5000
+epochs = 50
 steps_per_epoch = len(train_generator)
 
 for epoch in range(epochs):
@@ -82,16 +86,19 @@ for epoch in range(epochs):
         noise = np.random.normal(0, 1, (batch_size, latent_dim))
         generated_images = generator.predict(noise)
 
-        real_labels = np.ones(batch_size)
-        fake_labels = np.zeros(batch_size)
+        # Resize generated images to match the discriminator's input shape
+        resized_generated_images = tf.image.resize(generated_images, (128, 128))
+
+        real_labels = np.ones((batch_size, 1))
+        fake_labels = np.zeros((batch_size, 1))
 
         d_loss_real = discriminator.train_on_batch(real_images, real_labels)
-        d_loss_fake = discriminator.train_on_batch(generated_images, fake_labels)
+        d_loss_fake = discriminator.train_on_batch(resized_generated_images, fake_labels)
 
         d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
         noise = np.random.normal(0, 1, (batch_size, latent_dim))
-        valid_labels = np.ones(batch_size)
+        valid_labels = np.ones((batch_size, 1))
 
         g_loss = gan.train_on_batch(noise, valid_labels)
 
