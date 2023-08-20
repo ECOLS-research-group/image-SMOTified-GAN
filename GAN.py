@@ -56,8 +56,8 @@ gan.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(lr=0.
 # Load and preprocess the dataset using ImageDataGenerator
 datagen = ImageDataGenerator(rescale=1.0 / 255)
 
-data_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\train'
-#data_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\train"
+#data_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\train'
+data_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\train"
 batch_size = 32  # Adjust the batch size to be a multiple of the number of categories (e.g., 32/2 = 16)
 image_size = (128, 128)
 
@@ -71,12 +71,12 @@ train_generator = datagen.flow_from_directory(
 
 
 # Create a directory to save generated images
-output_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\generated'
-#output_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\generated"
+#output_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\generated'
+output_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\generated"
 os.makedirs(output_dir, exist_ok=True)
 
 # Training loop
-epochs = 50
+epochs = 5000
 steps_per_epoch = len(train_generator)
 
 for epoch in range(epochs):
@@ -104,7 +104,7 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch}, D Loss: {d_loss}, G Loss: {g_loss}")
 
-    if epoch % 1 == 0:
+    if epoch % 1000 == 0:
         samples = 10
         noise = np.random.normal(0, 1, (samples, latent_dim))
         generated_images = generator.predict(noise)
