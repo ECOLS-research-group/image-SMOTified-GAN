@@ -56,23 +56,21 @@ gan.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(lr=0.
 # Load and preprocess the dataset using ImageDataGenerator
 datagen = ImageDataGenerator(rescale=1.0 / 255)
 
-#data_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\train'
-data_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\train"
-batch_size = 32  # Adjust the batch size to be a multiple of the number of categories (e.g., 32/2 = 16)
+data_dir = "data\\flowers\\train\\daisy"
+batch_size = 12  # Adjust the batch size to be a multiple of the number of categories (e.g., 32/2 = 16)
 image_size = (128, 128)
 
 train_generator = datagen.flow_from_directory(
     data_dir,
     target_size=image_size,
     batch_size=batch_size,
-    class_mode='categorical',
+    class_mode=None,
     shuffle=True
 )
 
 
 # Create a directory to save generated images
-#output_dir = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\xray\\generated'
-output_dir = "C:\\Users\\dsingh\\Documents\\GitHub\\SMOTified-GAN-Image\\data\\xray\\generated"
+output_dir = "data\\flowers\\generated"
 os.makedirs(output_dir, exist_ok=True)
 
 # Training loop

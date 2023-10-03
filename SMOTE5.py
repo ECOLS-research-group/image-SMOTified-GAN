@@ -5,15 +5,13 @@ from imblearn.over_sampling import SMOTE
 import cv2
 
 # Define the path to the directory containing the image files
-#dir_path = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\flowers\\train'
-dir_path = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\flowers\\train'
+dir_path = 'data\\flowers\\train'
 
 # Define the size of the images
 new_size = (1000, 1000)
 
 # Define the path to the directory where the new images will be saved
-#new_dir_path = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\flowers\\generated'
-new_dir_path = 'C:\\Users\\singh\\OneDrive\\Documents\\Projects\\SMOTified-GAN-Image\\data\\flowers\\generated'
+new_dir_path = 'data\\flowers\\generated'
 
 # Load the image data using Keras
 datagen = ImageDataGenerator(rescale=1./255)

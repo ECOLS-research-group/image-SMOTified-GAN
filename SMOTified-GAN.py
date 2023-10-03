@@ -138,6 +138,7 @@ train_generator = datagen.flow_from_directory(
     smote_dir_path,
     target_size=image_size,
     batch_size=batch_size,
+    class_mode=None,
     shuffle=True
 )
 print("train generator end")
