@@ -24,3 +24,10 @@ Sure! Here's a pseudocode for implementing a SMOTE-GAN for an imbalanced image d
        - Train the generator with the discriminator frozen and appropriate labels
    - Evaluate the SMOTE-GAN model on the testing set
 12. Save the trained SMOTE-GAN model and the oversampled image dataset
+
+pip install numpy  
+pip install tensorflow  
+pip install matplotlib  
+pip install scipy
+- pip install imbalanced-learn
+- pip install opencv-python

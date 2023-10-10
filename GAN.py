@@ -70,11 +70,11 @@ train_generator = datagen.flow_from_directory(
 
 
 # Create a directory to save generated images
-output_dir = "data\\xray\\generated"
+output_dir = "data\\xray\\generated\\GAN"
 os.makedirs(output_dir, exist_ok=True)
 
 # Training loop
-epochs = 5000
+epochs = 50
 steps_per_epoch = len(train_generator)
 
 for epoch in range(epochs):
@@ -102,7 +102,7 @@ for epoch in range(epochs):
 
     print(f"Epoch {epoch}, D Loss: {d_loss}, G Loss: {g_loss}")
 
-    if epoch % 1000 == 0:
+    if epoch % 10 == 0:
         samples = 10
         noise = np.random.normal(0, 1, (samples, latent_dim))
         generated_images = generator.predict(noise)
@@ -111,4 +111,3 @@ for epoch in range(epochs):
             plt.axis('off')
             plt.savefig(f'{output_dir}/generated_epoch_{epoch}_sample_{i}.png')
             plt.close()
-
