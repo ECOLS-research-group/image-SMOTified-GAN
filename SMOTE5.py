@@ -22,6 +22,7 @@ train_generator = datagen.flow_from_directory(
         class_mode='categorical')
 
 # Print the class names and the total number of images in each class
+print("Total Images: ", train_generator.batch_size)
 print("Class names: ", train_generator.class_indices)
 print("Total images in each class: ", np.bincount(train_generator.classes))
 
@@ -64,6 +65,6 @@ if not os.path.exists(new_dir_path):
 for i in range(len(new_images)):
     img = new_images[i]
     label = new_labels[i]
-    if label in minority_class:
+    if i >= train_generator.batch_size and label in minority_class:
         filename = os.path.join(new_dir_path, 'label_%d_new_image_%d.jpg' % (label,i))
         cv2.imwrite(filename, img * 255)
