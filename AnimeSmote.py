@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 from imblearn.over_sampling import SMOTE
 from sklearn.utils import shuffle
-from sklearn.model_selection import train_test_split
 
 def load_images_from_folder(folder, target_size=(100, 100)):
     images = []
@@ -46,23 +45,29 @@ image_folder_path = 'data/anime_class'
 images, labels, class_mapping = load_images_from_folder(image_folder_path)
 
 # Shuffle the data
-images, labels = shuffle(images, labels, random_state=42)
+X_train, y_train = shuffle(images, labels, random_state=42)
 
-# Split the data into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=0.2, random_state=42)
+# Count the samples in the minority class before SMOTE
+minority_class_label = min(class_mapping.values())
+minority_class_count = np.sum(y_train == minority_class_label)
+
 
 # Apply SMOTE to the training set
 X_train_smote, y_train_smote = apply_smote(X_train, y_train, smote_ratio=1.0)
 
-# Save the oversampled images if needed
+# Find indices of samples from the minority class after skipping the first 5 samples
+minority_class_indices = np.where(y_train_smote == minority_class_label)[0][5:]
+
+# Extract only the data from the minority class after generating 5 images
+x_train_generated_minority_class = X_train_smote[minority_class_indices]
+
 # (ensure the output path exists before running this)
 output_path = 'data/generated_images_smote'
 if not os.path.exists(output_path):
     os.makedirs(output_path)
 
-for i, image in enumerate(X_train_smote):
-    class_name = [k for k, v in class_mapping.items() if v == y_train_smote[i]][0]
+# Save only the generated images from the minority class in the output folder
+for i, image in enumerate(x_train_generated_minority_class):
+    class_name = [k for k, v in class_mapping.items() if v == y_train_smote[minority_class_indices][i]][0]
     filename = f"{class_name}_smote_{i}.png"
     cv2.imwrite(os.path.join(output_path, filename), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-
-# Now, X_train_smote and y_train_smote contain the oversampled training set
