@@ -1,9 +1,78 @@
+import os
+import cv2
+import numpy as np
+from imblearn.over_sampling import SMOTE
+from sklearn.utils import shuffle
 import tensorflow as tf
 from tensorflow.keras import layers, models
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 from PIL import Image
+
+minority_class_count = 30
+def load_images_from_folder(folder, target_size=(100, 100)):
+    images = []
+    labels = []
+    class_mapping = {}
+    class_index = 0
+
+    for class_name in os.listdir(folder):
+        class_folder = os.path.join(folder, class_name)
+        if os.path.isdir(class_folder):
+            class_mapping[class_name] = class_index
+            class_index += 1
+            for filename in os.listdir(class_folder):
+                img_path = os.path.join(class_folder, filename)
+                img = cv2.imread(img_path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
+                img = cv2.resize(img, target_size)  # Resize images to a consistent size
+                images.append(img)
+                labels.append(class_mapping[class_name])
+
+    return np.array(images), np.array(labels), class_mapping
+
+def apply_smote(images, labels, smote_ratio=1.0):
+    # Flatten the images
+    flattened_images = images.reshape(images.shape[0], -1)
+
+    # Apply SMOTE
+    smote = SMOTE(sampling_strategy=smote_ratio, k_neighbors=3)
+    new_images, new_labels = smote.fit_resample(flattened_images, labels)
+
+    # Reshape the new images to their original shape
+    new_images = new_images.reshape(new_images.shape[0], *images.shape[1:])
+
+    return new_images, new_labels
+
+# Set your image folder path
+image_folder_path = 'data/anime_class'
+
+# Load images and labels from the folder
+images, labels, class_mapping = load_images_from_folder(image_folder_path)
+
+# Shuffle the data
+X_train, y_train = shuffle(images, labels, random_state=42)
+
+# Count the samples in the minority class before SMOTE
+minority_class_label = min(class_mapping.values())
+minority_class_count = np.sum(y_train == minority_class_label)
+
+# Count the samples in the minority class before SMOTE
+minority_class_label = min(class_mapping.values())
+minority_class_count = np.sum(y_train == minority_class_label)
+
+
+# Apply SMOTE to the training set
+X_train_smote, y_train_smote = apply_smote(X_train, y_train, smote_ratio=1.0)
+
+# Find indices of samples from the minority class after skipping the first 5 samples
+minority_class_indices = np.where(y_train_smote == minority_class_label)[0][minority_class_count:]
+
+# Extract only the data from the minority class after generating 5 images
+x_train_generated_minority_class = X_train_smote[minority_class_indices]
+x_train_generated_flat = x_train_generated_minority_class.reshape(x_train_generated_minority_class.shape[0], -1)
+#GAN###############
 
 # Define the paths and constants
 data_path = 'data/anime_class/blue'
@@ -72,7 +141,7 @@ real_images = load_images(data_path, img_size)
 # Training loop
 for epoch in range(epochs + 1):
     # Generate random noise as input to the generator
-    noise = np.random.normal(0, 1, (batch_size, latent_dim))
+    noise = x_train_generated_flat
     # Generate fake images using the generator
     generated_images = generator.predict(noise)
 
@@ -87,7 +156,7 @@ for epoch in range(epochs + 1):
     d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
     # Train the generator (discriminator weights are frozen)
-    noise = np.random.normal(0, 1, (batch_size, latent_dim))
+    noise = x_train_generated_flat
     valid_labels = np.ones((batch_size, 1))
     g_loss = gan.train_on_batch(noise, valid_labels)
 
@@ -100,16 +169,9 @@ for epoch in range(epochs + 1):
             os.makedirs(output_path)
         generated_images = generated_images * 0.5 + 0.5  # Rescale images from [-1, 1] to [0, 1]
         for i in range(generated_images.shape[0]):
-            plt.imsave(os.path.join(output_path, f"generated_image_{epoch}_{i}.png"), generated_images[i])
+            plt.imsave(os.path.join(output_path, f"smotifiedGAN_{epoch}_{i}.png"), generated_images[i])
 
-# Display generated images
-# plt.figure(figsize=(10, 10))
-# for i in range(20):
-#     plt.subplot(5, 5, i + 1)
-#     plt.imshow(generated_images[i])
-#     plt.axis('off')
-# plt.show()
-plt.figure(figsize=(10, 10))
+plt.figure(figsize=(5, 5))
 for i in range(min(20, generated_images.shape[0])):
     plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
     plt.imshow(generated_images[i])
