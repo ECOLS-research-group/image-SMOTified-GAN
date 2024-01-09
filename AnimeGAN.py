@@ -9,8 +9,9 @@ from PIL import Image
 data_path = 'data/anime_class/blue'
 output_path = 'data/generated_images/'
 batch_size = 20
-epochs = 1000
+epochs = 1500
 latent_dim = 30000
+interval = 1500
 
 # Function to load and preprocess images
 def load_images(image_path, img_size):
@@ -92,7 +93,7 @@ for epoch in range(epochs + 1):
     g_loss = gan.train_on_batch(noise, valid_labels)
 
     # Print progress and save generated images at certain intervals
-    if epoch % 200 == 0:
+    if epoch % interval == 0:
         print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
 
         # Save generated images

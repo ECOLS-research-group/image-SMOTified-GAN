@@ -78,8 +78,9 @@ x_train_generated_flat = x_train_generated_minority_class.reshape(x_train_genera
 data_path = 'data/anime_class/blue'
 output_path = 'data/generated_images/'
 batch_size = 20
-epochs = 1000
+epochs = 1500
 latent_dim = 30000
+interval = 1500
 
 # Function to load and preprocess images
 def load_images(image_path, img_size):
@@ -161,7 +162,7 @@ for epoch in range(epochs + 1):
     g_loss = gan.train_on_batch(noise, valid_labels)
 
     # Print progress and save generated images at certain intervals
-    if epoch % 200 == 0:
+    if epoch % interval == 0:
         print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
 
         # Save generated images
@@ -171,9 +172,9 @@ for epoch in range(epochs + 1):
         for i in range(generated_images.shape[0]):
             plt.imsave(os.path.join(output_path, f"smotifiedGAN_{epoch}_{i}.png"), generated_images[i])
 
-plt.figure(figsize=(5, 5))
-for i in range(min(20, generated_images.shape[0])):
-    plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
-    plt.imshow(generated_images[i])
-    plt.axis('off')
-plt.show()
+# plt.figure(figsize=(5, 5))
+# for i in range(min(20, generated_images.shape[0])):
+#     plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
+#     plt.imshow(generated_images[i])
+#     plt.axis('off')
+# plt.show()
