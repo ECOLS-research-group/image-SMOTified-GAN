@@ -6,12 +6,12 @@ import os
 from PIL import Image
 
 # Define the paths and constants
-data_path = 'data/anime_class/blue'
-output_path = 'data/generated_images/'
-batch_size = 20
-epochs = 1500
+data_path = 'data/chestxray/0TB'
+output_path = 'data/chestxrayGANgenerated/'
+batch_size = 60
+epochs = 1000
 latent_dim = 30000
-interval = 1500
+interval = 1000
 
 # Function to load and preprocess images
 def load_images(image_path, img_size):
@@ -19,6 +19,7 @@ def load_images(image_path, img_size):
     for filename in os.listdir(image_path):
         img = Image.open(os.path.join(image_path, filename))
         img = img.resize((img_size, img_size))
+        img = img.convert("RGB")
         img = np.array(img)
         img = (img.astype(np.float32) - 127.5) / 127.5  # Normalize to range [-1, 1]
         images.append(img)
@@ -92,8 +93,10 @@ for epoch in range(epochs + 1):
     valid_labels = np.ones((batch_size, 1))
     g_loss = gan.train_on_batch(noise, valid_labels)
 
+    print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
+
     # Print progress and save generated images at certain intervals
-    if epoch % interval == 0:
+    if epoch == interval:
         print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
 
         # Save generated images
@@ -110,7 +113,7 @@ for epoch in range(epochs + 1):
 #     plt.imshow(generated_images[i])
 #     plt.axis('off')
 # plt.show()
-plt.figure(figsize=(10, 10))
+plt.figure(figsize=(8, 10))
 for i in range(min(20, generated_images.shape[0])):
     plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
     plt.imshow(generated_images[i])

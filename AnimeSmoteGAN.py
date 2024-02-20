@@ -10,7 +10,18 @@ import matplotlib.pyplot as plt
 import os
 from PIL import Image
 
-minority_class_count = 30
+minority_class_count = 20
+# Set your image folder path
+image_folder_path = 'data/chestxray'
+# Define the paths and constants
+data_path = 'data/chestxray/0TB'
+output_path = 'data/chestxraygenerated/'
+batch_size = 60
+epochs = 1000
+latent_dim = 30000
+interval = 1000
+
+
 def load_images_from_folder(folder, target_size=(100, 100)):
     images = []
     labels = []
@@ -32,21 +43,18 @@ def load_images_from_folder(folder, target_size=(100, 100)):
 
     return np.array(images), np.array(labels), class_mapping
 
-def apply_smote(images, labels, smote_ratio=1.0):
+def apply_smote(images, labels):
     # Flatten the images
     flattened_images = images.reshape(images.shape[0], -1)
 
     # Apply SMOTE
-    smote = SMOTE(sampling_strategy=smote_ratio, k_neighbors=3)
+    smote = SMOTE(sampling_strategy="auto", k_neighbors=3)
     new_images, new_labels = smote.fit_resample(flattened_images, labels)
 
     # Reshape the new images to their original shape
     new_images = new_images.reshape(new_images.shape[0], *images.shape[1:])
 
     return new_images, new_labels
-
-# Set your image folder path
-image_folder_path = 'data/anime_class'
 
 # Load images and labels from the folder
 images, labels, class_mapping = load_images_from_folder(image_folder_path)
@@ -64,7 +72,7 @@ minority_class_count = np.sum(y_train == minority_class_label)
 
 
 # Apply SMOTE to the training set
-X_train_smote, y_train_smote = apply_smote(X_train, y_train, smote_ratio=1.0)
+X_train_smote, y_train_smote = apply_smote(X_train, y_train)
 
 # Find indices of samples from the minority class after skipping the first 5 samples
 minority_class_indices = np.where(y_train_smote == minority_class_label)[0][minority_class_count:]
@@ -74,13 +82,7 @@ x_train_generated_minority_class = X_train_smote[minority_class_indices]
 x_train_generated_flat = x_train_generated_minority_class.reshape(x_train_generated_minority_class.shape[0], -1)
 #GAN###############
 
-# Define the paths and constants
-data_path = 'data/anime_class/blue'
-output_path = 'data/generated_images/'
-batch_size = 20
-epochs = 1500
-latent_dim = 30000
-interval = 1500
+
 
 # Function to load and preprocess images
 def load_images(image_path, img_size):
@@ -88,6 +90,7 @@ def load_images(image_path, img_size):
     for filename in os.listdir(image_path):
         img = Image.open(os.path.join(image_path, filename))
         img = img.resize((img_size, img_size))
+        img = img.convert("RGB")
         img = np.array(img)
         img = (img.astype(np.float32) - 127.5) / 127.5  # Normalize to range [-1, 1]
         images.append(img)
@@ -161,9 +164,10 @@ for epoch in range(epochs + 1):
     valid_labels = np.ones((batch_size, 1))
     g_loss = gan.train_on_batch(noise, valid_labels)
 
+    print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
     # Print progress and save generated images at certain intervals
-    if epoch % interval == 0:
-        print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
+    if epoch == interval:
+        #print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
 
         # Save generated images
         if not os.path.exists(output_path):
@@ -172,9 +176,9 @@ for epoch in range(epochs + 1):
         for i in range(generated_images.shape[0]):
             plt.imsave(os.path.join(output_path, f"smotifiedGAN_{epoch}_{i}.png"), generated_images[i])
 
-# plt.figure(figsize=(5, 5))
-# for i in range(min(20, generated_images.shape[0])):
-#     plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
-#     plt.imshow(generated_images[i])
-#     plt.axis('off')
-# plt.show()
+plt.figure(figsize=(8, 10))
+for i in range(min(20, generated_images.shape[0])):
+    plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
+    plt.imshow(generated_images[i])
+    plt.axis('off')
+plt.show()

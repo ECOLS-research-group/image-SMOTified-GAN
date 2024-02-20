@@ -1,10 +1,11 @@
+from matplotlib import pyplot as plt
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.model_selection import train_test_split
 import os
 import numpy as np
-from sklearn.metrics import f1_score, roc_curve, auc, confusion_matrix
+from sklearn.metrics import average_precision_score, f1_score, precision_recall_curve, roc_curve, auc, confusion_matrix
 
 
 # Define the GoogLeNet (Inception) model
@@ -64,54 +65,32 @@ model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accur
 epochs = 10
 model.fit(train_generator, epochs=epochs, validation_data=validation_generator)
 
-# Evaluate the model on the test set
-train_loss, train_accuracy = model.evaluate(train_generator)
-print(f"\nTrain Accuracy: {train_accuracy * 100:.2f}%")
 
 # Evaluate the model on the test set
 test_loss, test_accuracy = model.evaluate(validation_generator)
 print(f"\nTest Accuracy: {test_accuracy * 100:.2f}%")
 
-########## F1 SCORE ##################
-# Make predictions on the validation set
-y_pred = model.predict(validation_generator)
-
-# Convert predictions to binary (0 or 1)
-y_pred_binary = np.argmax(y_pred, axis=1)
-
-# Convert one-hot encoded true labels to binary
-y_true_binary = validation_generator.classes
-
-# Calculate F1 score
-f1 = f1_score(y_true_binary, y_pred_binary, average='weighted')
-print(f'F1 Score: {f1:.4f}')
-
-############ ROC Curve ###############
+############ Precision-Recall Curve ###############
 # Make predictions on the validation set
 y_pred_prob = model.predict(validation_generator)
 
+y_true_binary = validation_generator.classes
 
-# Calculate ROC curve
-fpr, tpr, thresholds = roc_curve(y_true_binary, y_pred_prob[:, 1])
-roc_auc = auc(fpr, tpr)
+# Calculate precision-recall curve
+precision, recall, thresholds_pr = precision_recall_curve(y_true_binary, y_pred_prob[:, 1])
+average_precision = average_precision_score(y_true_binary, y_pred_prob[:, 1])
 
-# Plot ROC curve
-import matplotlib.pyplot as plt
+# Print average precision and recall
+print(f'Average Precision: {average_precision:.4f}')
+print(f'Average Recall: {np.mean(recall):.4f}')
+
+# Plot precision-recall curve
+# Plot precision-recall curve as a line graph
 plt.figure(figsize=(8, 6))
-plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
-plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('Receiver Operating Characteristic (ROC) Curve')
-plt.legend(loc='lower right')
+plt.plot(recall, precision, color='b', lw=2)
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.ylim([0.0, 1.05])
+plt.xlim([0.0, 1.0])
+plt.title('Precision-Recall Curve (AUC = {:.2f})'.format(average_precision))
 plt.show()
-
-############ Sensitivity & Specificity ###############
-# Calculate sensitivity (True Positive Rate)
-conf_matrix = confusion_matrix(y_true_binary, y_pred_binary)
-sensitivity = conf_matrix[1, 1] / (conf_matrix[1, 1] + conf_matrix[1, 0])
-print(f'Sensitivity (True Positive Rate): {sensitivity:.4f}')
-
-# Calculate specificity
-specificity = conf_matrix[0, 0] / (conf_matrix[0, 0] + conf_matrix[0, 1])
-print(f'\nSpecificity (True Negative Rate): {specificity:.4f}')

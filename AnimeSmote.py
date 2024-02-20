@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from imblearn.over_sampling import SMOTE
 from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
 
 def load_images_from_folder(folder, target_size=(100, 100)):
     images = []
@@ -25,12 +26,12 @@ def load_images_from_folder(folder, target_size=(100, 100)):
 
     return np.array(images), np.array(labels), class_mapping
 
-def apply_smote(images, labels, smote_ratio=1.0):
+def apply_smote(images, labels):
     # Flatten the images
     flattened_images = images.reshape(images.shape[0], -1)
 
     # Apply SMOTE
-    smote = SMOTE(sampling_strategy=smote_ratio, k_neighbors=3)
+    smote = SMOTE(sampling_strategy="auto", k_neighbors=3)
     new_images, new_labels = smote.fit_resample(flattened_images, labels)
 
     # Reshape the new images to their original shape
@@ -39,7 +40,7 @@ def apply_smote(images, labels, smote_ratio=1.0):
     return new_images, new_labels
 
 # Set your image folder path
-image_folder_path = 'data/anime_class'
+image_folder_path = 'data/chestxray'
 
 # Load images and labels from the folder
 images, labels, class_mapping = load_images_from_folder(image_folder_path)
@@ -53,16 +54,16 @@ minority_class_count = np.sum(y_train == minority_class_label)
 
 
 # Apply SMOTE to the training set
-X_train_smote, y_train_smote = apply_smote(X_train, y_train, smote_ratio=1.0)
+X_train_smote, y_train_smote = apply_smote(X_train, y_train)
 
 # Find indices of samples from the minority class after skipping the first 5 samples
-minority_class_indices = np.where(y_train_smote == minority_class_label)[0][5:]
+minority_class_indices = np.where(y_train_smote == minority_class_label)[0][20:]
 
 # Extract only the data from the minority class after generating 5 images
 x_train_generated_minority_class = X_train_smote[minority_class_indices]
 
 # (ensure the output path exists before running this)
-output_path = 'data/generated_images_smote'
+output_path = 'data/chestxraySMOTEgenerated'
 if not os.path.exists(output_path):
     os.makedirs(output_path)
 
@@ -71,3 +72,10 @@ for i, image in enumerate(x_train_generated_minority_class):
     class_name = [k for k, v in class_mapping.items() if v == y_train_smote[minority_class_indices][i]][0]
     filename = f"{class_name}_smote_{i}.png"
     cv2.imwrite(os.path.join(output_path, filename), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+
+plt.figure(figsize=(8, 10))
+for i in range(min(20, x_train_generated_minority_class.shape[0])):
+    plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
+    plt.imshow(x_train_generated_minority_class[i])
+    plt.axis('off')
+plt.show()
