@@ -1,70 +1,81 @@
 import os
-import numpy as np
-from keras.preprocessing.image import ImageDataGenerator
-from imblearn.over_sampling import SMOTE
 import cv2
+import numpy as np
+from imblearn.over_sampling import SMOTE
+from sklearn.utils import shuffle
+import matplotlib.pyplot as plt
 
-# Define the path to the directory containing the image files
-dir_path = 'data\\xray\\train'
+def load_images_from_folder(folder, target_size=(100, 100)):
+    images = []
+    labels = []
+    class_mapping = {}
+    class_index = 0
 
-# Define the size of the images
-new_size = (1000, 1000)
+    for class_name in os.listdir(folder):
+        class_folder = os.path.join(folder, class_name)
+        if os.path.isdir(class_folder):
+            class_mapping[class_name] = class_index
+            class_index += 1
+            for filename in os.listdir(class_folder):
+                img_path = os.path.join(class_folder, filename)
+                img = cv2.imread(img_path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
+                img = cv2.resize(img, target_size)  # Resize images to a consistent size
+                images.append(img)
+                labels.append(class_mapping[class_name])
 
-# Define the path to the directory where the new images will be saved
-new_dir_path = 'data\\xray\\generated'
+    return np.array(images), np.array(labels), class_mapping
 
-# Load the image data using Keras
-datagen = ImageDataGenerator(rescale=1./255)
-train_generator = datagen.flow_from_directory(
-        dir_path,
-        target_size=new_size,
-        batch_size=32,
-        class_mode='categorical')
+def apply_smote(images, labels):
+    # Flatten the images
+    flattened_images = images.reshape(images.shape[0], -1)
 
-# Print the class names and the total number of images in each class
-print("Class names: ", train_generator.class_indices)
-print("Total images in each class: ", np.bincount(train_generator.classes))
+    # Apply SMOTE
+    smote = SMOTE(sampling_strategy="auto", k_neighbors=3)
+    new_images, new_labels = smote.fit_resample(flattened_images, labels)
 
-# Convert the images to numpy arrays
-images, labels = train_generator.next()
+    # Reshape the new images to their original shape
+    new_images = new_images.reshape(new_images.shape[0], *images.shape[1:])
 
-######################################
-# Get the class labels for each image
-class_labels = np.argmax(labels, axis=1)
-# Get the indices of the minority classes
-minority_class = [c for c, count in enumerate(np.bincount(class_labels)) if count < np.max(np.bincount(class_labels))]
-print("Minority class: ", minority_class)
-###########################################
+    return new_images, new_labels
 
-# Reshape the images to 2D arrays
-height, width, channels = images[0].shape
-images_2d = images.reshape(images.shape[0], height, width, channels)
+# Set your image folder path
+image_folder_path = 'data/chestxray'
 
-# Resize the images
-new_images = np.array([cv2.resize(img, new_size) for img in images_2d])
+# Load images and labels from the folder
+images, labels, class_mapping = load_images_from_folder(image_folder_path)
 
-# Flatten the images to 1D arrays
-images_flat = new_images.reshape(new_images.shape[0], -1)
+# Shuffle the data
+X_train, y_train = shuffle(images, labels, random_state=42)
 
-# Apply SMOTE to generate new images
-smote = SMOTE()
-new_images_flat, new_labels = smote.fit_resample(images_flat, labels)
+# Count the samples in the minority class before SMOTE
+minority_class_label = min(class_mapping.values())
+minority_class_count = np.sum(y_train == minority_class_label)
 
-# Reshape the new images to 2D arrays
-new_images = new_images_flat.reshape(new_images_flat.shape[0], height, width, 3)
 
-# Clip the pixel values to the range [0, 1]
-new_images = np.clip(new_images, 0, 1)
+# Apply SMOTE to the training set
+X_train_smote, y_train_smote = apply_smote(X_train, y_train)
 
-# Create the directory to save the new images
-if not os.path.exists(new_dir_path):
-    os.makedirs(new_dir_path)
+# Find indices of samples from the minority class after skipping the first 5 samples
+minority_class_indices = np.where(y_train_smote == minority_class_label)[0][20:]
 
-# Save the new images to disk
-for i in range(len(new_images)):
-    img = new_images[i]
-    label = new_labels[i]
-    filename = os.path.join(new_dir_path, 'label_%d_new_image_%d.jpg' % (label,i))
-    # if i == minority_class[0]:
-    #     cv2.imwrite(filename, img * 255)
-    cv2.imwrite(filename, img * 255)
+# Extract only the data from the minority class after generating 5 images
+x_train_generated_minority_class = X_train_smote[minority_class_indices]
+
+# (ensure the output path exists before running this)
+output_path = 'data/chestxraySMOTEgenerated'
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+
+# Save only the generated images from the minority class in the output folder
+for i, image in enumerate(x_train_generated_minority_class):
+    class_name = [k for k, v in class_mapping.items() if v == y_train_smote[minority_class_indices][i]][0]
+    filename = f"{class_name}_smote_{i}.png"
+    cv2.imwrite(os.path.join(output_path, filename), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+
+plt.figure(figsize=(8, 10))
+for i in range(min(20, x_train_generated_minority_class.shape[0])):
+    plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
+    plt.imshow(x_train_generated_minority_class[i])
+    plt.axis('off')
+plt.show()

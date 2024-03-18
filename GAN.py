@@ -1,113 +1,121 @@
-import os
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers, models
+import numpy as np
 import matplotlib.pyplot as plt
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import os
+from PIL import Image
 
-# Define the Generator model
-def build_generator(latent_dim, channels):
+# Define the paths and constants
+data_path = 'data/chestxray/0TB'
+output_path = 'data/chestxrayGANgenerated/'
+batch_size = 60
+epochs = 1000
+latent_dim = 30000
+interval = 1000
+
+# Function to load and preprocess images
+def load_images(image_path, img_size):
+    images = []
+    for filename in os.listdir(image_path):
+        img = Image.open(os.path.join(image_path, filename))
+        img = img.resize((img_size, img_size))
+        img = img.convert("RGB")
+        img = np.array(img)
+        img = (img.astype(np.float32) - 127.5) / 127.5  # Normalize to range [-1, 1]
+        images.append(img)
+    return np.array(images)
+
+# Generator model
+def build_generator(latent_dim, img_size):
     model = models.Sequential()
-    model.add(layers.Dense(128 * 128 * channels, input_dim=latent_dim))
-    model.add(layers.Reshape((128, 128, channels)))
-    model.add(layers.Conv2DTranspose(128, (4, 4), strides=(2, 2), padding='same'))
-    model.add(layers.Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same'))
-    model.add(layers.Conv2DTranspose(channels, (4, 4), activation='sigmoid', padding='same'))  # Updated here
+    model.add(layers.Dense(256, input_dim=latent_dim))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.Dense(512))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.Dense(1024))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.BatchNormalization(momentum=0.8))
+    model.add(layers.Dense(np.prod((img_size, img_size, 3)), activation='tanh'))
+    model.add(layers.Reshape((img_size, img_size, 3)))
     return model
 
-# Define the Discriminator model
-def build_discriminator(img_shape):
+# Discriminator model
+def build_discriminator(img_size):
     model = models.Sequential()
-    model.add(layers.Conv2D(64, (4, 4), strides=(2, 2), padding='same', input_shape=img_shape))
-    model.add(layers.Conv2D(128, (4, 4), strides=(2, 2), padding='same'))
-    model.add(layers.Flatten())
+    model.add(layers.Flatten(input_shape=(img_size, img_size, 3)))
+    model.add(layers.Dense(512))
+    model.add(layers.LeakyReLU(alpha=0.2))
+    model.add(layers.Dense(256))
+    model.add(layers.LeakyReLU(alpha=0.2))
     model.add(layers.Dense(1, activation='sigmoid'))
     return model
 
+# Build and compile the discriminator
+img_size = 64  # Adjust this based on your image size
+discriminator = build_discriminator(img_size)
+discriminator.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(0.0002, 0.5), metrics=['accuracy'])
 
+# Build the generator
+generator = build_generator(latent_dim, img_size)
 
-# Define GAN model
-def build_gan(generator, discriminator):
-    discriminator.trainable = False
-    model = models.Sequential()
+# Create the GAN
+discriminator.trainable = False
+gan_input = tf.keras.Input(shape=(latent_dim,))
+generated_img = generator(gan_input)
+gan_output = discriminator(generated_img)
+gan = models.Model(gan_input, gan_output)
+gan.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(0.0002, 0.5))
 
-    # Add generator layers
-    model.add(generator)
-
-    # Add discriminator layers (without the fully connected layer)
-    for layer in discriminator.layers[:-1]:  # Exclude the last layer (fully connected)
-        model.add(layer)
-
-    return model
-
-# Parameters
-latent_dim = 100
-img_shape = (128, 128, 3)  # Update this to match your dataset's image size
-channels = img_shape[-1]
-num_categories = 2
-
-# Build and compile the models
-generator = build_generator(latent_dim, channels)
-discriminator = build_discriminator((128, 128, 3))
-discriminator.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(lr=0.0002, beta_1=0.5))  # Compile discriminator
-gan = build_gan(generator, discriminator)
-gan.compile(loss='binary_crossentropy', optimizer=tf.keras.optimizers.Adam(lr=0.0002, beta_1=0.5))
-
-# Load and preprocess the dataset using ImageDataGenerator
-datagen = ImageDataGenerator(rescale=1.0 / 255)
-
-data_dir = "data\\flowers\\train"
-batch_size = 32  # Adjust the batch size to be a multiple of the number of categories (e.g., 32/2 = 16)
-image_size = (128, 128)
-
-train_generator = datagen.flow_from_directory(
-    data_dir,
-    target_size=image_size,
-    batch_size=batch_size,
-    class_mode='categorical',
-    shuffle=True
-)
-
-
-# Create a directory to save generated images
-output_dir = "data\\xray\\generated\\GAN"
-os.makedirs(output_dir, exist_ok=True)
+# Load and preprocess images
+real_images = load_images(data_path, img_size)
 
 # Training loop
-epochs = 50
-steps_per_epoch = len(train_generator)
+for epoch in range(epochs + 1):
+    # Generate random noise as input to the generator
+    noise = np.random.normal(0, 1, (batch_size, latent_dim))
+    # Generate fake images using the generator
+    generated_images = generator.predict(noise)
 
-for epoch in range(epochs):
-    for step in range(steps_per_epoch):
-        real_images, real_labels = train_generator.next()  # Get both images and labels from the generator
+    # Combine real and fake images into a batch
+    batch_real_images = real_images[np.random.randint(0, real_images.shape[0], batch_size)]
+    batch_labels_real = np.ones((batch_size, 1))
+    batch_labels_fake = np.zeros((batch_size, 1))
 
-        noise = np.random.normal(0, 1, (batch_size, latent_dim))
-        generated_images = generator.predict(noise)
+    # Train the discriminator
+    d_loss_real = discriminator.train_on_batch(batch_real_images, batch_labels_real)
+    d_loss_fake = discriminator.train_on_batch(generated_images, batch_labels_fake)
+    d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-        # Resize generated images to match the discriminator's input shape
-        resized_generated_images = tf.image.resize(generated_images, (128, 128))
+    # Train the generator (discriminator weights are frozen)
+    noise = np.random.normal(0, 1, (batch_size, latent_dim))
+    valid_labels = np.ones((batch_size, 1))
+    g_loss = gan.train_on_batch(noise, valid_labels)
 
-        real_labels = np.ones((batch_size, 1))
-        fake_labels = np.zeros((batch_size, 1))
+    print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
 
-        d_loss_real = discriminator.train_on_batch(real_images, real_labels)
-        d_loss_fake = discriminator.train_on_batch(resized_generated_images, fake_labels)
+    # Print progress and save generated images at certain intervals
+    if epoch == interval:
+        print(f"Epoch {epoch}/{epochs} [D loss: {d_loss[0]} | D accuracy: {100 * d_loss[1]}] [G loss: {g_loss}]")
 
-        d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+        # Save generated images
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        generated_images = generated_images * 0.5 + 0.5  # Rescale images from [-1, 1] to [0, 1]
+        for i in range(generated_images.shape[0]):
+            plt.imsave(os.path.join(output_path, f"generated_image_{epoch}_{i}.png"), generated_images[i])
 
-        noise = np.random.normal(0, 1, (batch_size, latent_dim))
-        valid_labels = np.ones((batch_size, 1))
-
-        g_loss = gan.train_on_batch(noise, valid_labels)
-
-    print(f"Epoch {epoch}, D Loss: {d_loss}, G Loss: {g_loss}")
-
-    if epoch % 10 == 0:
-        samples = 10
-        noise = np.random.normal(0, 1, (samples, latent_dim))
-        generated_images = generator.predict(noise)
-        for i in range(samples):
-            plt.imshow(generated_images[i, :, :, 0], cmap='gray')
-            plt.axis('off')
-            plt.savefig(f'{output_dir}/generated_epoch_{epoch}_sample_{i}.png')
-            plt.close()
+# Display generated images
+# plt.figure(figsize=(10, 10))
+# for i in range(20):
+#     plt.subplot(5, 5, i + 1)
+#     plt.imshow(generated_images[i])
+#     plt.axis('off')
+# plt.show()
+plt.figure(figsize=(8, 10))
+for i in range(min(20, generated_images.shape[0])):
+    plt.subplot(5, 4, i + 1)  # Use 5 rows and 4 columns for a batch size of 20
+    plt.imshow(generated_images[i])
+    plt.axis('off')
+plt.show()

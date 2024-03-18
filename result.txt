@@ -1,0 +1,11 @@
+Train Accuracy Non Oversampled: 86.25%
+Test Accuracy Non Oversampled: 90.00%
+
+Train Accuracy SMOTE: 98.44%
+Test Accuracy SMOTE: 93.75%
+
+Train Accuracy GAN: 95.31%
+Test Accuracy GAN: 96.88%
+
+Train Accuracy SMOTified-GAN: 100.00%
+Test Accuracy SMOTified-GAN: 96.88%
