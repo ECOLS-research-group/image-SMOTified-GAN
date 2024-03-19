@@ -9,6 +9,7 @@ import os
 from PIL import Image
 from imblearn.over_sampling import SMOTE
 from sklearn.utils import shuffle
+from sklearn.metrics import classification_report
 
 
 def load_images_from_folder(folder, target_size=(100, 100)):
@@ -79,6 +80,8 @@ for i, image in enumerate(x_train_generated_minority_class):
     filename = f"{class_name}_smote_{i}.png"
     cv2.imwrite(os.path.join(output_path, filename), cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
+epochs = 1000
+interval = 1000
 
 #################    GAN      #########################
     
@@ -86,9 +89,7 @@ for i, image in enumerate(x_train_generated_minority_class):
 data_path = 'data/chestxray_GAN/0TB'
 output_path = 'data/chestxray_GAN/0TB'
 batch_size = 60
-epochs = 1000
 latent_dim = 30000
-interval = 1000
 
 # Function to load and preprocess images
 def load_images(image_path, img_size):
@@ -192,9 +193,7 @@ image_folder_path = 'data/chestxray_SMOTifiedGAN'
 data_path = 'data/chestxray_SMOTifiedGAN/0TB'
 output_path = 'data/chestxray_SMOTifiedGAN/0TB'
 batch_size = 60
-epochs = 1000
 latent_dim = 30000
-interval = 1000
 
 
 def load_images_from_folder(folder, target_size=(100, 100)):
@@ -458,15 +457,37 @@ model.fit(X_train_SMOTifiedGAN, y_train_SMOTifiedGAN, epochs=epochs)
 train_loss_SMOTifiedGAN, train_accuracy_SMOTifiedGAN = model.evaluate(X_train_SMOTifiedGAN, y_train_SMOTifiedGAN)
 test_loss_SMOTifiedGAN, test_accuracy_SMOTifiedGAN = model.evaluate(X_test_SMOTifiedGAN, y_test_SMOTifiedGAN)
 
+print(f"\nTrain Accuracy Non Oversampled: {train_accuracy_nonOversampled * 100:.4f}%")
+print(f"\nTest Accuracy Non Oversampled: {test_accuracy_nonOversampled * 100:.4f}%")
 
-print(f"\nTrain Accuracy Non Oversampled: {train_accuracy_nonOversampled * 100:.2f}%")
-print(f"\nTest Accuracy Non Oversampled: {test_accuracy_nonOversampled * 100:.2f}%")
+print(f"\nTrain Accuracy SMOTE: {train_accuracy_SMOTE * 100:.4f}%")
+print(f"\nTest Accuracy SMOTE: {test_accuracy_SMOTE * 100:.4f}%")
 
-print(f"\nTrain Accuracy SMOTE: {train_accuracy_SMOTE * 100:.2f}%")
-print(f"\nTest Accuracy SMOTE: {test_accuracy_SMOTE * 100:.2f}%")
+print(f"\nTrain Accuracy GAN: {train_accuracy_GAN * 100:.4f}%")
+print(f"\nTest Accuracy GAN: {test_accuracy_GAN * 100:.4f}%")
 
-print(f"\nTrain Accuracy GAN: {train_accuracy_GAN * 100:.2f}%")
-print(f"\nTest Accuracy GAN: {test_accuracy_GAN * 100:.2f}%")
+print(f"\nTrain Accuracy SMOTified-GAN: {train_accuracy_SMOTifiedGAN * 100:.4f}%")
+print(f"\nTest Accuracy SMOTified-GAN: {test_accuracy_SMOTifiedGAN * 100:.4f}%")
 
-print(f"\nTrain Accuracy SMOTified-GAN: {train_accuracy_SMOTifiedGAN * 100:.2f}%")
-print(f"\nTest Accuracy SMOTified-GAN: {test_accuracy_SMOTifiedGAN * 100:.2f}%")
+# Define a function to print precision, recall, and F1 score
+def print_classification_report(y_true, y_pred, model_name):
+    report = classification_report(y_true, y_pred, digits=4)
+    print(f"\nClassification Report for {model_name}:")
+    print(report)
+
+# Call the function for each model
+# Non Oversampled
+y_pred_nonOversampled = model.predict(X_test_nonOversampled).argmax(axis=1)
+print_classification_report(y_test_nonOversampled, y_pred_nonOversampled, "Non Oversampled")
+
+# SMOTE
+y_pred_SMOTE = model.predict(X_test_SMOTE).argmax(axis=1)
+print_classification_report(y_test_SMOTE, y_pred_SMOTE, "SMOTE")
+
+# GAN
+y_pred_GAN = model.predict(X_test_GAN).argmax(axis=1)
+print_classification_report(y_test_GAN, y_pred_GAN, "GAN")
+
+# SMOTified-GAN
+y_pred_SMOTifiedGAN = model.predict(X_test_SMOTifiedGAN).argmax(axis=1)
+print_classification_report(y_test_SMOTifiedGAN, y_pred_SMOTifiedGAN, "SMOTified-GAN")
