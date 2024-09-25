@@ -1,6 +1,6 @@
-#Image Based SMOTified-GAN
+# Image Based SMOTified-GAN
 
-Copyright (c) 2023, ECOLS - All rights reserved.
+Copyright (c) 2024, ECOLS - All rights reserved.
 
 [version 1.0]
 The original SMOTified-GAN worked only for numerical data. The code was written in Python.
@@ -14,7 +14,7 @@ The student Deshant Singh wrote the code for Image based SMOTified-GAN. The code
 Paper: “Improving Imbalanced Tuberculosis Diagnosis Using GoogleNet with Image-Based SMOTified-GAN”. Paper presented at the 3rd International Conference on Advances in Data driven Computing and Intelligent Systems (ADCIS).
 Authors: Deshant Singh and Anuraganand Sharma
 
-#Installation
+# Installation
 - pip install numpy  
 - pip install tensorflow  
 - pip install matplotlib  
