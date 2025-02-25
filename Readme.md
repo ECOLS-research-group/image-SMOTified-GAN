@@ -24,4 +24,4 @@ Authors: Deshant Singh and Anuraganand Sharma
 
 https://support.microsoft.com/help/2977003/the-latest-supported-visual-c-downloads
 
-run python main.py to run the program
+run python SMOTified-GAN.py to run the program
